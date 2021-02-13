@@ -121,7 +121,7 @@ function insightPagespeed() {
     return PropertiesService.getScriptProperties().setProperty(key, value);
   }
   
-  // スクリプトプロパティデリート
+  // スクリプトプロパティデリーター
   function deleteScriptProperty(key){
     return PropertiesService.getScriptProperties().deleteProperty(key);
   }
