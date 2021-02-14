@@ -3,26 +3,28 @@
  * 測定する要素はメソッド(callPageSpeedInsightsApi)の変数内で指定すること
  */
 function testWebPerformance() {
+    // 実行している関数名を取得
+    var thisFunctionName =  arguments.callee.name;
     // スプレッドシート、スプレッドシート内の全シートを取得
     var spredSheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheets = spredSheet.getSheets();
     // 何番目のシートか設定
-    var sheetIndex = getScriptProperty("sheetIndex") ? 
-        parseInt(getScriptProperty("sheetIndex")) : 0;
+    var sheetIndex = getScriptProperty('sheetIndex') ? 
+        parseInt(getScriptProperty('sheetIndex')) : 0;
     var sheet = sheets[sheetIndex];  
     // シートの最終行・列を取得
     var lastRow = sheet.getLastRow();
     var lastColumn = sheet.getLastColumn();
     // 書き込み開始列の設定（再起動時は処理を中断したURLの列から処理を実行）
-    var column = getScriptProperty("writtenColumn") ? 
-        parseInt(getScriptProperty("writtenColumn")) : 2;
+    var column = getScriptProperty('writtenColumn') ? 
+        parseInt(getScriptProperty('writtenColumn')) : 2;
     // 書き込み開始行設定（対象シートへの書き込みが初回の場合、最終行＋１の行に書き込みを行う）
     var row = (column == 2) ? lastRow + 1 : lastRow;
     
     // シート名の後ろ2文字を切り出してデバイスを取得
     var device = sheet.getName().substr(-2); 
     // デバイス別にクエリの値を取得
-    var strategy = device === "PC" ? "desktop" : "mobile";
+    var strategy = device === 'PC' ? 'desktop' : 'mobile';
    
     // 再起動用に開始時間を取得
     var start = dayjs.dayjs();
@@ -62,8 +64,8 @@ function testWebPerformance() {
   
       // 現在時間を取得して、開始から4分経過していたらforループ処理を中断して再起動
       var now = dayjs.dayjs();
-      if (now.diff(start, "minutes") >= 4) {
-        Logger.log("4分経過しました。タイムアウト回避のため処理を中断して再起動します");
+      if (now.diff(start, 'minutes') >= 4) {
+        Logger.log('4分経過しました。タイムアウト回避のため処理を中断して再起動します');
         break;
       }
     }
@@ -73,28 +75,27 @@ function testWebPerformance() {
   
     // columnを次の再起動用に設定
     var writtenColumn = column + aveScoreList.length;
-    setScriptProperty("writtenColumn", writtenColumn);
+    setScriptProperty('writtenColumn', writtenColumn);
     
     if (writtenColumn <= lastColumn) {
       // 最終行まで処理していない場合は再起動し、途中から処理実行
-      setTriggerAfterMinitues('testWebPerformance', 2);
+      setTriggerAfterMinitues(thisFunctionName, 2);
     } else {
       // 最終行まで処理している場合は保存していた行を削除
-      deleteScriptProperty("writtenColumn");
-      Logger.log(sheetIndex + "枚目のシートの処理が完了しました。");
+      deleteScriptProperty('writtenColumn');
 
       // 次のシート記載のURLについて計測するため、インデックスをインクリメント
       sheetIndex++;
       if (sheetIndex < sheets.length) {
         // 処理するシートが残っている場合、再起動し次のシートを処理する
-        setScriptProperty("sheetIndex", sheetIndex);
-        setTriggerAfterMinitues('testWebPerformance', 2);
+        setScriptProperty('sheetIndex', sheetIndex);
 
-        Logger.log(sheetIndex + "枚目のシートの処理を実施するため、再起動します");
+        Logger.log('次のシートの処理を実施するため、再起動します');
+        setTriggerAfterMinitues(thisFunctionName, 2);
       } else {
         // 最終シートまで処理した場合、スクリプトプロパティ削除
-        deleteScriptProperty("sheetIndex");
-        setTriggerDaily('testWebPerformance');
+        deleteScriptProperty('sheetIndex');
+        setTriggerDaily(thisFunctionName);
       }
     }
   }
@@ -107,15 +108,15 @@ function testWebPerformance() {
   */
   function callPageSpeedInsightsApi(url, strategy) {
       // API KEY取得
-      var API_TOKEN_PAGESPEED = getScriptProperty("API_TOKEN_PAGESPEED");
+      var API_TOKEN_PAGESPEED = getScriptProperty('API_TOKEN_PAGESPEED');
       // 言語設定
       var locale = 'ja_JP';
       // 測定する要素
       var testValue = 'speed-index';
 
       // リクエストURLを作成
-      var request = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=" + 
-        url + "&key=" + API_TOKEN_PAGESPEED + '&local=' + locale + "&strategy=" + strategy;
+      var request = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' + 
+        url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
   
       // URLをAPIに投げてみてエラーが返ってくる場合はログに残す
       try {
