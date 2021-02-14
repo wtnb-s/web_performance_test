@@ -39,6 +39,8 @@ function testWebPerformance() {
       // URLが空の場合はスキップ
       var url = urls[0][urlCount];
       if (!url) continue;
+      // 計測するURLを出力
+      Logger.log('計測対象：' + url + '; ' + strategy);
 
       // 一つのURLに対して複数回スコアを取得し、平均値を算出する
       var sumScore = 0, num = 0;
@@ -46,6 +48,7 @@ function testWebPerformance() {
         // API呼び出し
         var score = callPageSpeedInsightsApi(url, strategy);
         if (score) {
+          Logger.log('計測' + (count + 1) + '回目のスコア：' + score);
           sumScore = sumScore + score;
           num++;
         }
@@ -60,7 +63,7 @@ function testWebPerformance() {
       // 現在時間を取得して、開始から4分経過していたらforループ処理を中断して再起動
       var now = dayjs.dayjs();
       if (now.diff(start, "minutes") >= 4) {
-        Logger.log("4分経過しました。タイムアウト回避のため処理を中断して再起動します。");
+        Logger.log("4分経過しました。タイムアウト回避のため処理を中断して再起動します");
         break;
       }
     }
@@ -78,12 +81,16 @@ function testWebPerformance() {
     } else {
       // 最終行まで処理している場合は保存していた行を削除
       deleteScriptProperty("writtenColumn");
+      Logger.log(sheetIndex + "枚目のシートの処理が完了しました。");
+
       // 次のシート記載のURLについて計測するため、インデックスをインクリメント
       sheetIndex++;
       if (sheetIndex < sheets.length) {
-        // sheetIndexをスクリプトプロパティにセット後、再起動
+        // 処理するシートが残っている場合、再起動し次のシートを処理する
         setScriptProperty("sheetIndex", sheetIndex);
-        setTriggerAfterMinitues('testWebPerformance' ,2);
+        setTriggerAfterMinitues('testWebPerformance', 2);
+
+        Logger.log(sheetIndex + "枚目のシートの処理を実施するため、再起動します");
       } else {
         // 最終シートまで処理した場合、スクリプトプロパティ削除
         deleteScriptProperty("sheetIndex");
@@ -123,7 +130,6 @@ function testWebPerformance() {
       var score = parsedResult['lighthouseResult'] ? 
         parsedResult['lighthouseResult']['audits'][testValue]['displayValue'] : '';
       // 単位の「s」を削除して返却する
-      Logger.log(parseFloat(score.replace('s', '')));
       return parseFloat(score.replace('s', ''));
   }
 
@@ -137,8 +143,10 @@ function testWebPerformance() {
    // 同名のトリガーを削除 
    deleteTrigger(functionName);
    var setTime = new Date();
-   setTime.setMinutes(setTime.getMinutes() + minitues)
+   setTime.setMinutes(setTime.getMinutes() + minitues);
    ScriptApp.newTrigger(functionName).timeBased().at(setTime).create();
+   
+   Logger.log('トリガーの設定日時：' + setTime);
  }
 
   /*
@@ -154,6 +162,8 @@ function testWebPerformance() {
     setTime.setHours(20);
     setTime.setMinutes(00); 
     ScriptApp.newTrigger(functionName).timeBased().at(setTime).create();
+
+    Logger.log('トリガーの設定日時：' + setTime);
   }
 
   /*
