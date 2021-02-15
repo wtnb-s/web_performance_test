@@ -11,7 +11,7 @@ function testWebPerformance() {
     // スプレッドシート、スプレッドシート内の全シートを取得
     var spredSheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheets = spredSheet.getSheets();
-    // 何番目のシートか設定
+    // 書き込みを行うシートを設定
     var sheetIndex = getScriptProperty('sheetIndex') ? 
         parseInt(getScriptProperty('sheetIndex')) : 0;
     var sheet = sheets[sheetIndex];  
