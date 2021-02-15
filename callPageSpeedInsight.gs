@@ -67,7 +67,7 @@ function testWebPerformance() {
   
       // 現在時間を取得して、開始から4分経過していたらforループ処理を中断して再起動
       var now = dayjs.dayjs();
-      if (now.diff(start, 'minutes') >= 4) {
+      if (now.diff(start, 'minutes') >= 4 && writtenColumn <= lastColumn) {
         Logger.log('4分経過しました。タイムアウト回避のため処理を中断して再起動します');
         break;
       }
@@ -99,6 +99,7 @@ function testWebPerformance() {
         // 最終シートまで処理した場合、スクリプトプロパティ削除
         deleteScriptProperty('sheetIndex');
         setTriggerDaily(thisFunctionName, startHour);
+        Logger.log('処理を終了します');
       }
     }
   }
