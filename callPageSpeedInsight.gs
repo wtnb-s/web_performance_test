@@ -3,6 +3,9 @@
  * 測定する要素はメソッド(callPageSpeedInsightsApi)の変数内で指定すること
  */
 function testWebPerformance() {
+    // トリガーを起動する時刻(h)を取得
+    var startHour = getScriptProperty('START_HOUR') ?
+        parseInt(getScriptProperty('START_HOUR')) : 20;
     // 実行している関数名を取得
     var thisFunctionName =  arguments.callee.name;
     // スプレッドシート、スプレッドシート内の全シートを取得
@@ -24,7 +27,7 @@ function testWebPerformance() {
     // シート名の後ろ2文字を切り出してデバイスを取得
     var device = sheet.getName().substr(-2); 
     // デバイス別にクエリの値を取得
-    var strategy = device === 'PC' ? 'desktop' : 'mobile';
+    var strategy = (device === 'PC') ? 'desktop' : 'mobile';
    
     // 再起動用に開始時間を取得
     var start = dayjs.dayjs();
@@ -57,7 +60,7 @@ function testWebPerformance() {
       }
 
       // 小数点だ２位で四捨五入した上で平均値を算出
-      var aveScore = (num > 0) ? Math.round (sumScore / num * 10) / 10 : '-';
+      var aveScore = (num > 0) ? Math.round(sumScore / num * 10) / 10 : '-';
       aveScoreList.push(aveScore);
       Logger.log('##平均値##');
       Logger.log(aveScore);
@@ -95,7 +98,7 @@ function testWebPerformance() {
       } else {
         // 最終シートまで処理した場合、スクリプトプロパティ削除
         deleteScriptProperty('sheetIndex');
-        setTriggerDaily(thisFunctionName);
+        setTriggerDaily(thisFunctionName, startHour);
       }
     }
   }
@@ -153,14 +156,15 @@ function testWebPerformance() {
   /*
    * トリガー設定（定期実行用）
    * @param {string} functionName 対象関数名
+   * @param {int} hour トリガーを起動する時刻(h)を設定
   */
-  function setTriggerDaily(functionName) {
+  function setTriggerDaily(functionName, hour) {
     // 同名のトリガーを削除 
     deleteTrigger(functionName);
     
     var setTime = new Date();
     setTime.setDate(setTime.getDate() + 1)
-    setTime.setHours(20);
+    setTime.setHours(hour);
     setTime.setMinutes(00); 
     ScriptApp.newTrigger(functionName).timeBased().at(setTime).create();
 
