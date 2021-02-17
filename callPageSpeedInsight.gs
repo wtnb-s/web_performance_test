@@ -111,31 +111,30 @@ function testWebPerformance() {
    * @return {int | string} speed index score
   */
   function callPageSpeedInsightsApi(url, strategy) {
-      // API KEY取得
-      var API_TOKEN_PAGESPEED = getScriptProperty('API_TOKEN_PAGESPEED');
-      // 言語設定
-      var locale = 'ja_JP';
-      // 測定する要素
-      var testValue = 'speed-index';
+    // API KEY取得
+    var API_TOKEN_PAGESPEED = getScriptProperty('API_TOKEN_PAGESPEED');
+    // 言語設定
+    var locale = 'ja_JP';
+    // 測定する要素
+    var testValue = 'speed-index';
+    // リクエストURLを作成
+    var request = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' + 
+      url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
 
-      // リクエストURLを作成
-      var request = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' + 
-        url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
-  
-      // URLをAPIに投げてみてエラーが返ってくる場合はログに残す
-      try {
-        var response = UrlFetchApp.fetch(request, { muteHttpExceptions: true })
-      } catch (err) {
-        Logger.log(err)
-        return err
-      }
-      // 返ってきたjsonをパース
-      var parsedResult = Utilities.jsonParse(response.getContentText());
-      // speedIndexのスコアを取得
-      var score = parsedResult['lighthouseResult'] ? 
-        parsedResult['lighthouseResult']['audits'][testValue]['displayValue'] : '';
-      // 単位の「s」を削除して返却する
-      return parseFloat(score.replace('s', ''));
+    // URLをAPIに投げてみてエラーが返ってくる場合はログに残す
+    try {
+      var response = UrlFetchApp.fetch(request, { muteHttpExceptions: true })
+    } catch (err) {
+      Logger.log(err)
+      return err
+    }
+    // 返ってきたjsonをパース
+    var parsedResult = Utilities.jsonParse(response.getContentText());
+    // speedIndexのスコアを取得
+    var score = parsedResult['lighthouseResult'] ? 
+      parsedResult['lighthouseResult']['audits'][testValue]['displayValue'] : '';
+    // 単位の「s」を削除して返却する
+    return parseFloat(score.replace('s', ''));
   }
 
 
