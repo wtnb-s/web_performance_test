@@ -24,7 +24,7 @@ function testWebPerformance() {
     // URL配列を現在の行から最後まで取得
     var url = sheet.getValue('D1');
     // 計測するURLを出力
-    Logger.log('計測対象：' + url + '; ' + strategy);
+    Logger.log('シート：' + sheetIndex + '/' + sheets.length + ' 計測対象：' + url + '; ' + strategy);
   
     // 1列目に書き込み日時を書き込む
     var today = dayjs.dayjs().format('MM-DD HH:mm');
@@ -37,7 +37,7 @@ function testWebPerformance() {
     // 現在時間を取得して、開始から5分経過していたらforループ処理を中断して再起動
     var now = dayjs.dayjs();
     if (now.diff(start, 'minutes') >= 5 && sheetIndex < sheets.length) {
-      Logger.log('4分経過しました。タイムアウト回避のため処理を中断して再起動します');
+      Logger.log('5分経過しました。タイムアウト回避のため処理を中断して再起動します');
       break;
     }
   }
@@ -57,7 +57,6 @@ function testWebPerformance() {
 
     Logger.log('処理を終了します');
   }
-
 }
   
 /*
