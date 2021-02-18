@@ -19,7 +19,8 @@ function getWebVital() {
     // シートの最終行を取得
     var row = sheet.getLastRow() + 1;
     // デバイス別にクエリの値を取得
-    var strategy = sheet.getRange('B1').getValue();
+    var device = sheet.getRange('B1').getValue();
+    var strategy = (device === 'PC') ? 'desktop' : 'mobile';
     // URL配列を現在の行から最後まで取得
     var url = sheet.getRange('D1').getValue();
     // 計測するURLを出力
@@ -84,9 +85,7 @@ function callPageSpeedInsightsApi(url, strategy) {
   var parsedResult = Utilities.jsonParse(response.getContentText());
     
   var values = {};
-  // スコア
-  values['score'] = parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
+  // フィールドデータ
   // First Contentful Paint
   values['fcp'] = parsedResult['loadingExperience'] ?
     parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '';
@@ -99,6 +98,26 @@ function callPageSpeedInsightsApi(url, strategy) {
   // Cumulative Layout Shift
   values['cls'] = parsedResult['loadingExperience'] ?
     parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '';
+
+  // ラボデータ
+  // スコア
+  values['score'] = parsedResult['lighthouseResult'] ?
+    parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
+  // First Contentful Paint(Lab)
+  values['fcpLab'] = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '';
+  // Speed Index(Lab)
+  values['siLab'] = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '';
+  // Largest Contentful Paint
+  values['lcpLab'] = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '';
+  // Total Blocking Time
+  values['tbtLab'] = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '';
+  // Cumulative Layout Shift
+  values['clsLab'] = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '';
 
   return values;
 }
