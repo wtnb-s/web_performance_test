@@ -18,10 +18,10 @@ function getWebVital() {
     var sheet = sheets[sheetIndex];  
     // シートの最終行を取得
     var row = sheet.getLastRow() + 1;
-    // デバイス別にクエリの値を取得
+    // デバイス設定取得
     var device = sheet.getRange('B1').getValue();
     var strategy = (device === 'PC') ? 'desktop' : 'mobile';
-    // URL配列を現在の行から最後まで取得
+    // URL取得
     var url = sheet.getRange('D1').getValue();
     // 計測するURLを出力
     Logger.log('シート：' + (sheetIndex + 1) + '/' + sheets.length + ' 計測対象：' + url + '; ' + strategy);
@@ -31,13 +31,18 @@ function getWebVital() {
     sheet.getRange(row, 1).setValue(today);
     // API呼び出し
     var values = callPageSpeedInsightsApi(url, strategy);
+    // valuesが空だった場合、再度APIを呼び出す
+    if (values.length == 0) {
+      values = callPageSpeedInsightsApi(url, strategy);
+    }
+    
     // 取得したスコアを書き込む
-    sheet.getRange(row, 2, 1, Object.keys(values).length).setValues([Object.values(values)]);
+    sheet.getRange(row, 2, 1, values.length).setValues([values]);
   
-    // 現在時間を取得して、開始から5分経過していたらforループ処理を中断して再起動
+    // 現在時間を取得して、開始から4分経過していたらforループ処理を中断して再起動
     var now = dayjs.dayjs();
-    if (now.diff(start, 'minutes') >= 5 && (sheetIndex + 1) < sheets.length) {
-      Logger.log('5分経過しました。タイムアウト回避のため処理を中断して再起動します');
+    if (now.diff(start, 'minutes') >= 4 && (sheetIndex + 1) < sheets.length) {
+      Logger.log('4分経過しました。タイムアウト回避のため処理を中断して再起動します');
       break;
     }
   }
@@ -52,7 +57,7 @@ function getWebVital() {
 
     // トリガーを起動する時刻(h)を取得
     var startHour = getScriptProperty('START_HOUR') ?
-      parseInt(getScriptProperty('START_HOUR')) : 20;
+      parseInt(getScriptProperty('START_HOUR')) : 21;
     setTriggerDaily(thisFunctionName, startHour);
 
     Logger.log('処理を終了します');
@@ -83,41 +88,40 @@ function callPageSpeedInsightsApi(url, strategy) {
   }
   // 返ってきたjsonをパース
   var parsedResult = Utilities.jsonParse(response.getContentText());
-    
-  var values = {};
+  var values = [];
   // フィールドデータ
   // First Contentful Paint
-  values['fcp'] = parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '';
+  values.push(parsedResult['loadingExperience'] ?
+    parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '');
   // Largest Contentful Paint
-  values['lcp'] = parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['LARGEST_CONTENTFUL_PAINT_MS']['percentile'] : '';
+  values.push(parsedResult['loadingExperience'] ?
+    parsedResult['loadingExperience']['metrics']['LARGEST_CONTENTFUL_PAINT_MS']['percentile'] : '');
   // First Input Delay
-  values['fid'] = parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['FIRST_INPUT_DELAY_MS']['percentile'] : '';
+  values.push(parsedResult['loadingExperience'] ?
+    parsedResult['loadingExperience']['metrics']['FIRST_INPUT_DELAY_MS']['percentile'] : '');
   // Cumulative Layout Shift
-  values['cls'] = parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '';
+  values.push(parsedResult['loadingExperience'] ?
+    parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '');
 
   // ラボデータ
   // スコア
-  values['score'] = parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
+  values.push(parsedResult['lighthouseResult'] ?
+    parsedResult['lighthouseResult']['categories']['performance']['score'] : '');
   // First Contentful Paint(Lab)
-  values['fcpLab'] = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '';
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '');
   // Speed Index(Lab)
-  values['siLab'] = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '';
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '');
   // Largest Contentful Paint
-  values['lcpLab'] = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '';
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '');
   // Total Blocking Time
-  values['tbtLab'] = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '';
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '');
   // Cumulative Layout Shift
-  values['clsLab'] = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '';
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '');
 
   return values;
 }
