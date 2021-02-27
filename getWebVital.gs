@@ -79,7 +79,7 @@ function callPageSpeedInsightsApi(url, strategy) {
   var request = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' + 
     url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
 
-  // URLをAPIに投げてみてエラーが返ってくる場合はログに残す
+  // URLをAPIに投げ、エラーが返ってくる場合ログに残す
   try {
     var response = UrlFetchApp.fetch(request, { muteHttpExceptions: true })
   } catch (err) {
