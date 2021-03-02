@@ -34,31 +34,9 @@ function getWebVital() {
       values.push(callPageSpeedInsightsApi(url, strategy));  
     }
     // データ変換（values['count']['key'] → items['key']['count']）
-    var items = [];
-    for (var key = 0; key < values[0].length; key++) {
-      var item = [];
-      for (var count = 0; count < values.length; count++) {
-        if (values[count][key]) {
-          item.push(values[count][key]);
-        }
-      }
-      items.push(item);
-    }
+    var items = convertArrayFormat(values);
     // 各要素毎に平均値計算（外れ値考慮のため、配列中の最小値と最大値を取り除いた上で計算する）
-    aveList = [];
-    for (var key = 0; key < items.length; key++) {
-      Logger.log(items[key].join(','));
-      var maxIndex = items[key].indexOf(Math.max.apply(null,items[key]));
-      var minIndex = items[key].indexOf(Math.min.apply(null,items[key]));
-      items[key].splice(maxIndex, 1);
-      items[key].splice(minIndex, 1);
-      // 小数点第4位で四捨五入した上で平均値を算出
-      ave = items[key].reduce(function(pre, curr, i) {
-        return pre + curr;
-      }, 0) / items[key].length;
-      
-      aveList.push(Math.round(ave * 1000) / 1000);
-    }
+    var aveList = getAverage(items);
 
     // 1列目に書き込み日時を書き込む
     var today = dayjs.dayjs().format('MM-DD HH:mm');
@@ -94,7 +72,7 @@ function getWebVital() {
 /*
  * PageSpeed Insight API呼び出し
  * @param {string} url 測定する対象URL
- * @aram {string} strategy デバイスタイプ
+ * @param {string} strategy デバイスタイプ
  * @return {array} Web Vital data
 */
 function callPageSpeedInsightsApi(url, strategy) {
@@ -135,28 +113,65 @@ function callPageSpeedInsightsApi(url, strategy) {
   var score = parsedResult['lighthouseResult'] ?
     parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
   values.push(parseFloat(score * 100));
-  // First Contentful Paint(Lab)(s→ms)
-  var fcp = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '';
-  values.push(parseFloat(fcp.replace('s', '')) * 1000);
-    // Speed Index(Lab)(s→ms)
-  var si = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '';
-  values.push(parseFloat(si.replace('s', '')) * 1000);
-  // Largest Contentful Paint(s→ms)
-  var lcp = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '';
-  values.push(parseFloat(lcp.replace('s', '')) * 1000);
+  // First Contentful Paint(Lab)(ms)
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['numericValue'] : '');
+  // Speed Index(Lab)(ms)
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['speed-index']['numericValue'] : '');
+  // Largest Contentful Paint(ms)
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['numericValue'] : '');
   // Total Blocking Time(ms)
-  var tbt = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '';
-  values.push(parseFloat(tbt.replace('ms', '')));
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['total-blocking-time']['numericValue'] : '');
   // Cumulative Layout Shift(単位なし)
-  var cls = parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '';
-  values.push(parseFloat(cls));
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['numericValue'] : '');
 
   return values;
+}
+
+/*
+ * 配列中の要素ごとに
+ * @param {array} values 変換配列
+ * @return {array} items 変換後配列
+*/
+function convertArrayFormat(values) {
+  var items = [];
+  for (var key = 0; key < values[0].length; key++) {
+    var item = [];
+    for (var count = 0; count < values.length; count++) {
+      if (values[count][key]) {
+        item.push(values[count][key]);
+      }
+    }
+    items.push(item);
+  }
+  return items;
+}
+
+/*
+ * 各要素毎に平均値計算（外れ値考慮のため、配列中の最小値と最大値を取り除いた上で計算する）
+ * @param {array} items 要素データの格納された配列データ
+ * @return {array} averageList 要素毎の平均値データの配列
+*/
+function getAverage(items) {
+  aveList = [];
+  for (var key = 0; key < items.length; key++) {
+    Logger.log(items[key].join(','));
+    var maxIndex = items[key].indexOf(Math.max.apply(null,items[key]));
+    var minIndex = items[key].indexOf(Math.min.apply(null,items[key]));
+    items[key].splice(maxIndex, 1);
+    items[key].splice(minIndex, 1);
+    // 小数点第4位で四捨五入した上で平均値を算出
+    ave = items[key].reduce(function(pre, curr, i) {
+      return pre + curr;
+    }, 0) / items[key].length;
+    
+    aveList.push(Math.round(ave * 10) / 10);
+  }
+  return aveList;
 }
 
 /*
