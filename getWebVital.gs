@@ -1,5 +1,6 @@
 /**
  * Web Performance(core web vital)を測定
+ * ラボデータは５回取得し、外れ値考慮のため、配列中の最小値と最大値を取り除いた上で平均を計算
  */
 function getWebVital() {
   // 実行している関数名を取得
@@ -25,24 +26,50 @@ function getWebVital() {
     var url = sheet.getRange('D1').getValue();
     // 計測するURLを出力
     Logger.log('シート：' + (sheetIndex + 1) + '/' + sheets.length + ' 計測対象：' + url + '; ' + strategy);
-    
+
+    // Web Vitalデータ取得
+    var values = [];
+    for (var count = 0; count < 5; count++) {
+      // API呼び出し
+      values.push(callPageSpeedInsightsApi(url, strategy));  
+    }
+    // データ変換（values['count']['key'] → items['key']['count']）
+    var items = [];
+    for (var key = 0; key < values[0].length; key++) {
+      var item = [];
+      for (var count = 0; count < values.length; count++) {
+        if (values[count][key]) {
+          item.push(values[count][key]);
+        }
+      }
+      items.push(item);
+    }
+    // 各要素毎に平均値計算（外れ値考慮のため、配列中の最小値と最大値を取り除いた上で計算する）
+    aveList = [];
+    for (var key = 0; key < items.length; key++) {
+      Logger.log(items[key].join(','));
+      var maxIndex = items[key].indexOf(Math.max.apply(null,items[key]));
+      var minIndex = items[key].indexOf(Math.min.apply(null,items[key]));
+      items[key].splice(maxIndex, 1);
+      items[key].splice(minIndex, 1);
+      // 小数点第4位で四捨五入した上で平均値を算出
+      ave = items[key].reduce(function(pre, curr, i) {
+        return pre + curr;
+      }, 0) / items[key].length;
+      
+      aveList.push(Math.round(ave * 1000) / 1000);
+    }
+
     // 1列目に書き込み日時を書き込む
     var today = dayjs.dayjs().format('MM-DD HH:mm');
     sheet.getRange(row, 1).setValue(today);
-    // API呼び出し
-    var values = callPageSpeedInsightsApi(url, strategy);
-    // valuesが空だった場合、再度APIを呼び出す
-    if (values.length == 0) {
-      values = callPageSpeedInsightsApi(url, strategy);
-    }
-    
     // 取得したスコアを書き込む
-    sheet.getRange(row, 2, 1, values.length).setValues([values]);
+    sheet.getRange(row, 2, 1, aveList.length).setValues([aveList]);
   
-    // 現在時間を取得して、開始から4分経過していたらforループ処理を中断して再起動
+    // 現在時間を取得して、開始から3分経過していたらforループ処理を中断して再起動
     var now = dayjs.dayjs();
-    if (now.diff(start, 'minutes') >= 4 && (sheetIndex + 1) < sheets.length) {
-      Logger.log('4分経過しました。タイムアウト回避のため処理を中断して再起動します');
+    if (now.diff(start, 'minutes') >= 3 && (sheetIndex + 1) < sheets.length) {
+      Logger.log('3分経過しました。タイムアウト回避のため処理を中断して再起動します');
       break;
     }
   }
@@ -90,38 +117,44 @@ function callPageSpeedInsightsApi(url, strategy) {
   var parsedResult = Utilities.jsonParse(response.getContentText());
   var values = [];
   // フィールドデータ
-  // First Contentful Paint
-  values.push(parsedResult['loadingExperience'] ?
+  // First Contentful Paint(ms)
+  values.push(parsedResult['loadingExperience'] ? 
     parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '');
-  // Largest Contentful Paint
+  // Largest Contentful Paint(ms)
   values.push(parsedResult['loadingExperience'] ?
     parsedResult['loadingExperience']['metrics']['LARGEST_CONTENTFUL_PAINT_MS']['percentile'] : '');
-  // First Input Delay
+  // First Input Delay(ms)
   values.push(parsedResult['loadingExperience'] ?
     parsedResult['loadingExperience']['metrics']['FIRST_INPUT_DELAY_MS']['percentile'] : '');
-  // Cumulative Layout Shift
+  // Cumulative Layout Shift(単位なし)
   values.push(parsedResult['loadingExperience'] ?
     parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '');
 
   // ラボデータ
-  // スコア
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['categories']['performance']['score'] : '');
-  // First Contentful Paint(Lab)
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '');
-  // Speed Index(Lab)
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '');
-  // Largest Contentful Paint
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '');
-  // Total Blocking Time
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '');
-  // Cumulative Layout Shift
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '');
+  // スコア(単位なし)
+  var score = parsedResult['lighthouseResult'] ?
+    parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
+  values.push(parseFloat(score * 100));
+  // First Contentful Paint(Lab)(s→ms)
+  var fcp = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['displayValue'] : '';
+  values.push(parseFloat(fcp.replace('s', '')) * 1000);
+    // Speed Index(Lab)(s→ms)
+  var si = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['speed-index']['displayValue'] : '';
+  values.push(parseFloat(si.replace('s', '')) * 1000);
+  // Largest Contentful Paint(s→ms)
+  var lcp = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['displayValue'] : '';
+  values.push(parseFloat(lcp.replace('s', '')) * 1000);
+  // Total Blocking Time(ms)
+  var tbt = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['total-blocking-time']['displayValue'] : '';
+  values.push(parseFloat(tbt.replace('ms', '')));
+  // Cumulative Layout Shift(単位なし)
+  var cls = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['displayValue'] : '';
+  values.push(parseFloat(cls));
 
   return values;
 }
