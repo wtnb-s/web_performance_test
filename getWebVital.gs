@@ -112,7 +112,7 @@ function callPageSpeedInsightsApi(url, strategy) {
   // スコア(単位なし)
   var score = parsedResult['lighthouseResult'] ?
     parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
-  values.push(parseFloat(score * 100));
+  values.push(score * 100);
   // First Contentful Paint(Lab)(ms)
   values.push(parsedResult['lighthouseResult'] ? 
     parsedResult['lighthouseResult']['audits']['first-contentful-paint']['numericValue'] : '');
@@ -126,8 +126,9 @@ function callPageSpeedInsightsApi(url, strategy) {
   values.push(parsedResult['lighthouseResult'] ? 
     parsedResult['lighthouseResult']['audits']['total-blocking-time']['numericValue'] : '');
   // Cumulative Layout Shift(単位なし)
-  values.push(parsedResult['lighthouseResult'] ? 
-    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['numericValue'] : '');
+  var cls = parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['numericValue'] : '';
+  values.push(cls * 100);
 
   return values;
 }
