@@ -169,8 +169,7 @@ function getAverage(items) {
     ave = items[key].reduce(function(pre, curr, i) {
       return pre + curr;
     }, 0) / items[key].length;
-    
-    aveList.push(Math.round(ave * 10) / 10);
+    aveList.push(ave);
   }
   return aveList;
 }
