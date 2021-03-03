@@ -1,6 +1,6 @@
 /**
  * Web Performance(core web vital)を測定
- * ラボデータは５回取得し、外れ値考慮のため、配列中の最小値と最大値を取り除いた上で平均を計算
+ * ラボデータは6回取得し、外れ値考慮のため、配列中の最小値と最大値を取り除いた上で平均を計算
  */
 function getWebVital() {
   // 実行している関数名を取得
@@ -29,7 +29,7 @@ function getWebVital() {
 
     // Web Vitalデータ取得
     var values = [];
-    for (var count = 0; count < 5; count++) {
+    for (var count = 0; count < 6; count++) {
       // API呼び出し
       values.push(callPageSpeedInsightsApi(url, strategy));  
     }
@@ -55,7 +55,7 @@ function getWebVital() {
   if (sheetIndex < sheets.length) {
     // 最終シートまで処理していない場合は再起動し、途中から処理実行
     setScriptProperty('sheetIndex', sheetIndex + 1);
-    setTriggerAfterMinitues(thisFunctionName, 2);
+    setTriggerAfterMinutes(thisFunctionName, 2);
   } else {
     // 最終シートまで処理した場合、スクリプトプロパティ削除
     deleteScriptProperty('sheetIndex');
@@ -122,6 +122,9 @@ function callPageSpeedInsightsApi(url, strategy) {
   // Largest Contentful Paint(ms)
   values.push(parsedResult['lighthouseResult'] ? 
     parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['numericValue'] : '');
+  // Time to Interactive(ms)
+  values.push(parsedResult['lighthouseResult'] ? 
+    parsedResult['lighthouseResult']['audits']['interactive']['numericValue'] : '');
   // Total Blocking Time(ms)
   values.push(parsedResult['lighthouseResult'] ? 
     parsedResult['lighthouseResult']['audits']['total-blocking-time']['numericValue'] : '');
@@ -169,7 +172,8 @@ function getAverage(items) {
     ave = items[key].reduce(function(pre, curr, i) {
       return pre + curr;
     }, 0) / items[key].length;
-    aveList.push(ave);
+
+    aveList.push(Math.round(ave));
   }
   return aveList;
 }
@@ -177,13 +181,13 @@ function getAverage(items) {
 /*
  * トリガー設定（設定した分後）
  * @param {string} functionName 対象関数名
- * @param {int} minitues 何分後にトリガーを実行するか
+ * @param {int} minutes 何分後にトリガーを実行するか
 */
-function setTriggerAfterMinitues(functionName, minitues) {
+function setTriggerAfterMinutes(functionName, minutes) {
    // 同名のトリガーを削除 
    deleteTrigger(functionName);
    var setTime = new Date();
-   setTime.setMinutes(setTime.getMinutes() + minitues);
+   setTime.setMinutes(setTime.getMinutes() + minutes);
    ScriptApp.newTrigger(functionName).timeBased().at(setTime).create();
 
    Logger.log('トリガーの設定日時：' + setTime);
