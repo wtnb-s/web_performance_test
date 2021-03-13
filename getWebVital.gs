@@ -29,11 +29,11 @@ function getWebVital() {
 
     // Web Vitalデータ取得
     var values = [];
-    for (var count = 0; count < 6; count++) {
+    for (var getCount = 0; getCount < 6; getCount++) {
       // API呼び出し
       values.push(callPageSpeedInsightsApi(url, strategy));  
     }
-    // データ変換（values['count']['key'] → items['key']['count']）
+    // データ変換（values['getCount']['key'] → items['key']['getCount']）
     var items = convertArrayFormat(values);
     // 各要素毎に平均値計算（外れ値考慮のため、配列中の最小値と最大値を取り除いた上で計算する）
     var aveList = getAverage(items);
@@ -55,7 +55,7 @@ function getWebVital() {
   if (sheetIndex < sheets.length) {
     // 最終シートまで処理していない場合は再起動し、途中から処理実行
     setScriptProperty('sheetIndex', sheetIndex + 1);
-    setTriggerAfterMinutes(thisFunctionName, 2);
+    setTriggerAfterMinutes(thisFunctionName, 1);
   } else {
     // 最終シートまで処理した場合、スクリプトプロパティ削除
     deleteScriptProperty('sheetIndex');
@@ -137,7 +137,7 @@ function callPageSpeedInsightsApi(url, strategy) {
 }
 
 /*
- * 配列中の要素ごとに
+ * 配列中の要素ごとに変換する
  * @param {array} values 変換配列
  * @return {array} items 変換後配列
 */
@@ -145,9 +145,10 @@ function convertArrayFormat(values) {
   var items = [];
   for (var key = 0; key < values[0].length; key++) {
     var item = [];
-    for (var count = 0; count < values.length; count++) {
-      if (values[count][key]) {
-        item.push(values[count][key]);
+    for (var getCount = 0; getCount < values.length; getCount++) {
+      // APIの取得に失敗している可能性を考慮して値が入っているか判定する
+      if (values[getCount][key]) {
+        item.push(values[getCount][key]);
       }
     }
     items.push(item);
@@ -168,7 +169,7 @@ function getAverage(items) {
     var minIndex = items[key].indexOf(Math.min.apply(null,items[key]));
     items[key].splice(maxIndex, 1);
     items[key].splice(minIndex, 1);
-    // 小数点第4位で四捨五入した上で平均値を算出
+    // 平均値を算出し、四捨五入する
     ave = items[key].reduce(function(pre, curr, i) {
       return pre + curr;
     }, 0) / items[key].length;
