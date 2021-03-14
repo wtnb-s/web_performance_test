@@ -10,8 +10,8 @@ function getChangeRate() {
     return;
   }
   //　読み取り用スプレッドシートの読み取り行・列取得
-  var startRow = getScriptProperty('startRow');
-  var startColumn = getScriptProperty('startColumn');
+  var startRow = parseInt(getScriptProperty('startRow'));
+  var startColumn = parseInt(getScriptProperty('startColumn'));
 
   // 読み取り用スプレッドシート、スプレッドシート内の全シートを取得
   var inputSpredSheet = SpreadsheetApp.openById(sheetKey);
@@ -21,6 +21,7 @@ function getChangeRate() {
   var outputSheets = outputSpredSheet.getSheets();
 
   for (var sheetIndex = 0; sheetIndex < inputSheets.length; sheetIndex++) {
+    Logger.log((sheetIndex + 1) + 'シート目');
     // 読み込み・書き込みを行うシートを設定
     var inputSheet = inputSheets[sheetIndex];
     var outputSheet = outputSheets[sheetIndex];
