@@ -32,10 +32,10 @@ function getChangeRate() {
     // 日付配列データ、各項目データ配列の初期化
     var dateList = [];
     var itemsList = [];
-    for (var column = startColumn; column < lastColumn; column++) {
+    for (var column = startColumn; column <= lastColumn; column++) {
       var valueList = [];
       var changeRateList = [];
-      for (var row = startRow; row < lastRow; row++) {
+      for (var row = startRow; row <= lastRow; row++) {
         // 該当セルの生データ取得
         var value = inputSheet.getRange(row, column).getValue();
         // 変化率初期化
@@ -47,7 +47,7 @@ function getChangeRate() {
         }
 
         // 前日x日間平均値から該当セルの変化率算出
-        var beforeDay = 7;
+        var beforeDay = 1;
         if (value && row > startRow + (beforeDay - 1)) {
           // 該当セルの前日〜指定したx日前までの値を取得
           var pastDaysValueList = inputSheet.getRange(row - beforeDay, column, beforeDay, 1).getValues();
