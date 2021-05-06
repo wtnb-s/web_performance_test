@@ -1,21 +1,21 @@
 /**
  * Web Performance(core web vital)を測定
- * ラボデータは6回取得し、外れ値考慮のため、配列中の最小値と最大値を取り除いた上で平均を計算
+ * ラボデータは５回取得し、外れ値考慮のため、配列中の最小値と最大値を取り除いた上で平均を計算
  */
 function getWebVital() {
-  // 実行している関数名を取得
-  var thisFunctionName = arguments.callee.name;
   // スプレッドシート、スプレッドシート内の全シートを取得
   var spredSheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheets = spredSheet.getSheets();
   // 書き込みを行うシートを設定
-  var sheetIndex = getScriptProperty('sheetIndex') ?
-    parseInt(getScriptProperty('sheetIndex')) : 0;
+  var sheetIndex = getScriptProperty('sheetIndex') ? parseInt(getScriptProperty('sheetIndex')) : 0;
 
   // 再起動用に開始時間を取得
   var start = dayjs.dayjs();
 
   for (sheetIndex; sheetIndex < sheets.length; sheetIndex++) {
+    // 強制終了してもスクリプトが最後まで実行されるように再起動用のタイマーをセット
+    setTriggerAfterMinutes('getWebVital', 10);
+
     var sheet = sheets[sheetIndex];
     // シートの最終行を取得
     var row = sheet.getLastRow() + 1;
@@ -29,7 +29,7 @@ function getWebVital() {
 
     // Web Vitalデータ取得
     var values = [];
-    for (var getCount = 0; getCount < 6; getCount++) {
+    for (var getCount = 0; getCount < 5; getCount++) {
       // API呼び出し
       values.push(callPageSpeedInsightsApi(url, strategy));
     }
@@ -44,26 +44,27 @@ function getWebVital() {
     // 取得したスコアを書き込む
     sheet.getRange(row, 2, 1, aveList.length).setValues([aveList]);
 
+    // 書き込みが完了したら、インクリメントしたsheetIndexを保存
+    setScriptProperty('sheetIndex', sheetIndex + 1);
+
     // 現在時間を取得して、開始から3分経過していたらforループ処理を中断して再起動
     var now = dayjs.dayjs();
-    if (now.diff(start, 'minutes') >= 3 && sheetIndex + 1 < sheets.length) {
-      Logger.log('3分経過しました。タイムアウト回避のため処理を中断して再起動します');
+    if (now.diff(start, 'minutes') >= 2 && sheetIndex + 1 < sheets.length) {
+      Logger.log('2分経過しました。タイムアウト回避のため処理を中断して再起動します');
       break;
     }
   }
 
   if (sheetIndex < sheets.length) {
     // 最終シートまで処理していない場合は再起動し、途中から処理実行
-    setScriptProperty('sheetIndex', sheetIndex + 1);
-    setTriggerAfterMinutes(thisFunctionName, 1);
+    setTriggerAfterMinutes('getWebVital', 2);
   } else {
     // 最終シートまで処理した場合、スクリプトプロパティ削除
     deleteScriptProperty('sheetIndex');
 
     // トリガーを起動する時刻(h)を取得
-    var startHour = getScriptProperty('START_HOUR') ?
-      parseInt(getScriptProperty('START_HOUR')) : 21;
-    setTriggerDaily(thisFunctionName, startHour);
+    var startHour = getScriptProperty('START_HOUR') ? parseInt(getScriptProperty('START_HOUR')) : 21;
+    setTriggerDaily('getWebVital', startHour);
 
     Logger.log('処理を終了します');
   }
@@ -81,59 +82,50 @@ function callPageSpeedInsightsApi(url, strategy) {
   // 言語設定
   var locale = 'ja_JP';
   // リクエストURLを作成
-  var request = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' +
-    url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
+  var request =
+    'https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=' + url + '&key=' + API_TOKEN_PAGESPEED + '&local=' + locale + '&strategy=' + strategy;
 
   // URLをAPIに投げ、エラーが返ってくる場合ログに残す
   try {
     var response = UrlFetchApp.fetch(request, { muteHttpExceptions: true });
   } catch (err) {
     Logger.log(err);
-    return err;
+    return [];
   }
   // 返ってきたjsonをパース
   var parsedResult = Utilities.jsonParse(response.getContentText());
   var values = [];
-  // フィールドデータ
-  // First Contentful Paint(ms)
-  values.push(parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '');
-  // Largest Contentful Paint(ms)
-  values.push(parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['LARGEST_CONTENTFUL_PAINT_MS']['percentile'] : '');
-  // First Input Delay(ms)
-  values.push(parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['FIRST_INPUT_DELAY_MS']['percentile'] : '');
-  // Cumulative Layout Shift(単位なし)
-  values.push(parsedResult['loadingExperience'] ?
-    parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '');
+  try {
+    // フィールドデータ
+    // First Contentful Paint(ms)
+    values.push(parsedResult['loadingExperience'] ? parsedResult['loadingExperience']['metrics']['FIRST_CONTENTFUL_PAINT_MS']['percentile'] : '');
+    // Largest Contentful Paint(ms)
+    values.push(parsedResult['loadingExperience'] ? parsedResult['loadingExperience']['metrics']['LARGEST_CONTENTFUL_PAINT_MS']['percentile'] : '');
+    // First Input Delay(ms)
+    values.push(parsedResult['loadingExperience'] ? parsedResult['loadingExperience']['metrics']['FIRST_INPUT_DELAY_MS']['percentile'] : '');
+    // Cumulative Layout Shift(単位なし)
+    values.push(parsedResult['loadingExperience'] ? parsedResult['loadingExperience']['metrics']['CUMULATIVE_LAYOUT_SHIFT_SCORE']['percentile'] : '');
 
-  // ラボデータ
-  // スコア(単位なし)
-  var score = parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
-  values.push(score * 100);
-  // First Contentful Paint(Lab)(ms)
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['first-contentful-paint']['numericValue'] : '');
-  // Speed Index(Lab)(ms)
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['speed-index']['numericValue'] : '');
-  // Largest Contentful Paint(ms)
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['numericValue'] : '');
-  // Time to Interactive(ms)
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['interactive']['numericValue'] : '');
-  // Total Blocking Time(ms)
-  values.push(parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['total-blocking-time']['numericValue'] : '');
-  // Cumulative Layout Shift(単位なし)
-  var cls = parsedResult['lighthouseResult'] ?
-    parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['numericValue'] : '';
-  values.push(cls * 100);
-
-  return values;
+    // ラボデータ
+    // スコア(単位なし)
+    var score = parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['categories']['performance']['score'] : '';
+    values.push(score * 100);
+    // First Contentful Paint(Lab)(ms)
+    values.push(parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['audits']['first-contentful-paint']['numericValue'] : '');
+    // Speed Index(Lab)(ms)
+    values.push(parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['audits']['speed-index']['numericValue'] : '');
+    // Largest Contentful Paint(ms)
+    values.push(parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['audits']['largest-contentful-paint']['numericValue'] : '');
+    // Total Blocking Time(ms)
+    values.push(parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['audits']['total-blocking-time']['numericValue'] : '');
+    // Cumulative Layout Shift(単位なし)
+    var cls = parsedResult['lighthouseResult'] ? parsedResult['lighthouseResult']['audits']['cumulative-layout-shift']['numericValue'] : '';
+    values.push(cls * 100);
+  } catch (err) {
+    Logger.log(err);
+  } finally {
+    return values;
+  }
 }
 
 /*
